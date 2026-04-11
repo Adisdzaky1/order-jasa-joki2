@@ -1,0 +1,243 @@
+<%# views/pesan.ejs %>
+<% layout('layouts/main') %>
+<% title = 'Pesan - ' + service.name %>
+
+<section class="py-12 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+
+  <%# Breadcrumb & Step Indicator %>
+  <div class="mb-8">
+    <div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
+      <a href="/layanan" class="hover:text-gray-300 transition-colors">Layanan</a>
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      <span class="text-gray-300"><%= service.name %></span>
+    </div>
+
+    <%# Step indicator %>
+    <div class="flex items-center gap-0">
+      <% [['1','Detail Tugas'], ['2','Pembayaran'], ['3','Selesai']].forEach(([n,label], i) => { %>
+        <div class="flex items-center <%= i < 2 ? 'flex-1' : '' %>">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                        <%= n === '1' ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-500 border border-gray-700' %>">
+              <%= n %>
+            </div>
+            <span class="text-sm <%= n === '1' ? 'text-white font-medium' : 'text-gray-500' %> hidden sm:block"><%= label %></span>
+          </div>
+          <% if (i < 2) { %>
+            <div class="flex-1 h-px bg-gray-800 mx-3"></div>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <%# ── Form Kiri ─────────────────────────────────────────────────────────── %>
+    <div class="lg:col-span-2">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-white mb-6">Detail Pesanan</h2>
+
+        <div id="form-error" class="hidden mb-5 p-3.5 bg-red-950 border border-red-800 rounded-xl text-sm text-red-400"></div>
+
+        <form id="order-form" enctype="multipart/form-data" class="space-y-5">
+          <input type="hidden" name="service_id" value="<%= service.id %>"/>
+          <input type="hidden" name="service_name" value="<%= service.name %>"/>
+          <input type="hidden" name="price" value="<%= service.price %>"/>
+          <input type="hidden" name="user_name" value="<%= user.name || '' %>"/>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Judul Tugas <span class="text-red-400">*</span>
+            </label>
+            <input type="text" name="title" id="title" placeholder="Contoh: Skripsi Manajemen S1 Topik Digital Marketing"
+                   class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-gray-100
+                          focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"/>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Deskripsi Lengkap <span class="text-red-400">*</span>
+            </label>
+            <textarea name="description" id="description" rows="5"
+                      placeholder="Jelaskan secara detail: topik, jumlah halaman, format, deadline, instruksi dosen, dll."
+                      class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-gray-100
+                             focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500
+                             transition-colors text-sm resize-none"></textarea>
+          </div>
+
+          <%# File Upload %>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">
+              Lampiran <span class="text-gray-500 font-normal">(opsional — maks. 2MB)</span>
+            </label>
+            <div id="drop-zone"
+                 class="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer
+                        hover:border-indigo-500 transition-colors group">
+              <input type="file" name="attachment" id="attachment" accept=".jpg,.jpeg,.png,.pdf,.docx" class="hidden"/>
+              <div id="upload-placeholder">
+                <svg class="w-8 h-8 text-gray-600 mx-auto mb-2 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p class="text-sm text-gray-400">Klik atau drag & drop file di sini</p>
+                <p class="text-xs text-gray-600 mt-1">JPG, PNG, PDF, DOCX</p>
+              </div>
+              <div id="file-preview" class="hidden">
+                <div class="flex items-center justify-center gap-3">
+                  <span class="text-2xl" id="file-icon">📄</span>
+                  <div class="text-left">
+                    <p class="text-sm text-white font-medium" id="file-name"></p>
+                    <p class="text-xs text-gray-500" id="file-size"></p>
+                  </div>
+                  <button type="button" id="remove-file" class="ml-2 text-gray-500 hover:text-red-400 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" id="submit-btn"
+                  class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl
+                         transition-colors duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+            <span id="submit-text">Lanjut ke Pembayaran →</span>
+            <svg id="submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+            </svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <%# ── Ringkasan Kanan ─────────────────────────────────────────────────── %>
+    <div class="lg:col-span-1">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 sticky top-20">
+        <div class="text-3xl mb-3"><%= service.icon %></div>
+        <h3 class="font-semibold text-white mb-1"><%= service.name %></h3>
+        <p class="text-sm text-gray-400 mb-4 leading-relaxed"><%= service.description %></p>
+
+        <div class="border-t border-gray-800 pt-4 space-y-2.5">
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-400">Estimasi</span>
+            <span class="text-gray-200 font-medium"><%= service.estimasi %></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-gray-400">Harga</span>
+            <span class="text-indigo-400 font-bold">Rp <%= service.price.toLocaleString('id-ID') %></span>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-800 pt-4 mt-4">
+          <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Termasuk</h4>
+          <ul class="space-y-2">
+            <% service.features.forEach(f => { %>
+              <li class="flex items-center gap-2 text-xs text-gray-400">
+                <svg class="w-3.5 h-3.5 text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                </svg>
+                <%= f %>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ── File Upload UX ──────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('attachment');
+  const placeholder = document.getElementById('upload-placeholder');
+  const preview = document.getElementById('file-preview');
+  const fileName = document.getElementById('file-name');
+  const fileSize = document.getElementById('file-size');
+  const fileIcon = document.getElementById('file-icon');
+
+  dropZone.addEventListener('click', (e) => {
+    if (!e.target.closest('#remove-file')) fileInput.click();
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('border-indigo-500');
+  });
+
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500'));
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('border-indigo-500');
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  document.getElementById('remove-file').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.value = '';
+    placeholder.classList.remove('hidden');
+    preview.classList.add('hidden');
+  });
+
+  function setFile(file) {
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Ukuran file maksimal 2MB');
+      return;
+    }
+    const icons = { 'application/pdf': '📄', 'image/jpeg': '🖼️', 'image/png': '🖼️',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝' };
+    fileIcon.textContent = icons[file.type] || '📁';
+    fileName.textContent = file.name;
+    fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+    placeholder.classList.add('hidden');
+    preview.classList.remove('hidden');
+  }
+
+  // ── Form Submit ─────────────────────────────────────────────────────────────
+  document.getElementById('order-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('form-error');
+    const btn = document.getElementById('submit-btn');
+    const spinner = document.getElementById('submit-spinner');
+    const text = document.getElementById('submit-text');
+
+    errEl.classList.add('hidden');
+
+    const title = document.getElementById('title').value.trim();
+    const desc = document.getElementById('description').value.trim();
+    if (!title || !desc) {
+      errEl.textContent = 'Judul dan deskripsi wajib diisi.';
+      return errEl.classList.remove('hidden');
+    }
+
+    btn.disabled = true;
+    text.textContent = 'Memproses...';
+    spinner.classList.remove('hidden');
+
+    try {
+      const formData = new FormData(e.target);
+      const res = await fetch('/api/orders', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = '/pembayaran/' + data.orderId;
+      } else {
+        throw new Error(data.error || 'Gagal membuat pesanan');
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+      btn.disabled = false;
+      text.textContent = 'Lanjut ke Pembayaran →';
+      spinner.classList.add('hidden');
+    }
+  });
+</script>

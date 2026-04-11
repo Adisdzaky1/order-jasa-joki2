@@ -1,0 +1,44 @@
+<%# views/partials/navbar.ejs %>
+<header class="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <%# Logo %>
+      <a href="/" class="flex items-center gap-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-sm group-hover:bg-indigo-500 transition-colors">JT</div>
+        <span class="font-bold text-white text-lg tracking-tight">JasaTugas<span class="text-indigo-400">.id</span></span>
+      </a>
+
+      <%# Desktop Nav %>
+      <nav class="hidden md:flex items-center gap-1">
+        <a href="/" class="px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Beranda</a>
+        <a href="/layanan" class="px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Layanan</a>
+      </nav>
+
+      <%# Auth Buttons %>
+      <div class="flex items-center gap-2" id="nav-auth">
+        <%# Diisi oleh main.js setelah cek cookie/session %>
+        <a href="/login" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-800">Masuk</a>
+        <a href="/register" class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors">Daftar</a>
+      </div>
+
+      <%# Mobile hamburger %>
+      <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+
+    <%# Mobile Menu %>
+    <div id="mobile-menu" class="hidden md:hidden pb-4 space-y-1">
+      <a href="/" class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800">Beranda</a>
+      <a href="/layanan" class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800">Layanan</a>
+      <a href="/dashboard" class="block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800">Dashboard</a>
+      <div class="pt-2 flex flex-col gap-2">
+        <a href="/login" class="px-4 py-2 text-sm text-center text-gray-400 hover:text-white border border-gray-700 rounded-xl hover:border-gray-600">Masuk</a>
+        <a href="/register" class="px-4 py-2 text-sm text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl">Daftar</a>
+      </div>
+    </div>
+  </div>
+</header>

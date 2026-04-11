@@ -1,0 +1,119 @@
+/* public/css/custom.css */
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #030712; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ── Selection ───────────────────────────────────────────────────────────── */
+::selection { background: rgba(99,102,241,0.35); color: #fff; }
+
+/* ── Smooth Scroll ───────────────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+/* ── Focus Ring (override Tailwind default to indigo) ───────────────────── */
+:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
+
+/* ── Transitions ─────────────────────────────────────────────────────────── */
+a, button { transition-property: color, background-color, border-color, opacity, box-shadow; transition-duration: 150ms; }
+
+/* ── Gradient Text ───────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glass Card ──────────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Glow Effect ─────────────────────────────────────────────────────────── */
+.glow-indigo { box-shadow: 0 0 32px rgba(99,102,241,0.25); }
+.glow-violet { box-shadow: 0 0 32px rgba(139,92,246,0.2); }
+
+/* ── Badge Pulse ─────────────────────────────────────────────────────────── */
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+.animate-badge { animation: badge-pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+
+/* ── Skeleton Loading ────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ── Table Hover ─────────────────────────────────────────────────────────── */
+.table-row-hover:hover { background: rgba(99,102,241,0.04); }
+
+/* ── Truncate Multi-line ─────────────────────────────────────────────────── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── File Drop Zone Active ───────────────────────────────────────────────── */
+.drop-active {
+  border-color: #6366f1 !important;
+  background: rgba(99,102,241,0.05);
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+
+/* ── Modal Animation ─────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.modal-enter { animation: fadeInUp 0.2s ease-out; }
+
+/* ── Toast Slide-in ──────────────────────────────────────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+#toast { animation: slideInRight 0.25s ease-out; }
+
+/* ── QR Code container ───────────────────────────────────────────────────── */
+.qr-wrapper {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 16px;
+  display: inline-block;
+}
+
+/* ── Chart.js canvas ─────────────────────────────────────────────────────── */
+canvas { max-width: 100%; }
+
+/* ── Responsive table scroll ─────────────────────────────────────────────── */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Sidebar transition (admin) ──────────────────────────────────────────── */
+#sidebar { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── Step indicator connector ────────────────────────────────────────────── */
+.step-connector { height: 2px; flex: 1; margin: 0 12px; }
+
+/* ── Print ───────────────────────────────────────────────────────────────── */
+@media print {
+  header, footer, #sidebar, .no-print { display: none !important; }
+  body { background: white; color: black; }
+}

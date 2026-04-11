@@ -1,0 +1,43 @@
+<%# views/partials/toast.ejs %>
+<% if (typeof flash !== 'undefined' && flash) { %>
+<div id="toast-container" class="fixed top-5 right-5 z-[9999] space-y-2 max-w-sm w-full px-4">
+  <div id="toast"
+       class="flex items-start gap-3 p-4 rounded-2xl border shadow-2xl transition-all duration-300
+              <%= flash.type === 'success'
+                ? 'bg-green-950 border-green-700 text-green-300'
+                : flash.type === 'error'
+                ? 'bg-red-950 border-red-700 text-red-300'
+                : 'bg-indigo-950 border-indigo-700 text-indigo-300' %>">
+
+    <%# Icon %>
+    <% if (flash.type === 'success') { %>
+      <svg class="w-5 h-5 mt-0.5 shrink-0 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    <% } else if (flash.type === 'error') { %>
+      <svg class="w-5 h-5 mt-0.5 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    <% } else { %>
+      <svg class="w-5 h-5 mt-0.5 shrink-0 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    <% } %>
+
+    <p class="text-sm font-medium flex-1"><%= flash.message %></p>
+
+    <button onclick="this.closest('#toast').remove()" class="ml-auto opacity-60 hover:opacity-100 transition-opacity">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+</div>
+<script>
+  // Auto-dismiss setelah 4 detik
+  setTimeout(() => {
+    const t = document.getElementById('toast');
+    if (t) { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }
+  }, 4000);
+</script>
+<% } %>
