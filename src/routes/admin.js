@@ -32,6 +32,12 @@ router.post('/auth/logout', (req, res) => {
   res.redirect('/admin/login');
 });
 
+// ─── GET /admin (root) ───────────────────────────────────────────────────────
+router.get('/', (req, res) => {
+  if (req.session?.isAdmin) return res.redirect('/admin/dashboard');
+  res.redirect('/admin/login');
+});
+
 // ─── GET /admin/login ─────────────────────────────────────────────────────────
 router.get('/login', (req, res) => {
   if (req.session?.isAdmin) return res.redirect('/admin/dashboard');
