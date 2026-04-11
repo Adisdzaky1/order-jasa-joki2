@@ -106,11 +106,11 @@ function statusBadge(status, queueNumber) {
                             class="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
                       Detail
                     </button>
-                    <% if (order.status === 'selesai' && order.result_file) { %>
-                      <a href="#" onclick="downloadResult('<%= order.id %>', '<%= order.result_filename || 'hasil.pdf' %>', '<%= order.result_filetype || '' %>', event)"
+                    <% if (order.status === 'selesai' && order.result_files && order.result_files.length > 0) { %>
+                      <button onclick="openModal('<%= order.id %>'); switchTab('info')"
                          class="text-xs text-green-400 hover:text-green-300 font-medium transition-colors">
                         Download ↓
-                      </a>
+                      </button>
                     <% } %>
                     <% if (order.payment_status === 'pending' && order.atlantic_tx_id) { %>
                       <a href="/pembayaran/<%= order.id %>"
@@ -143,9 +143,8 @@ function statusBadge(status, queueNumber) {
               </p>
               <div class="flex gap-3">
                 <button onclick="openModal('<%= order.id %>')" class="text-xs text-indigo-400 font-medium">Detail</button>
-                <% if (order.status === 'selesai' && order.result_file) { %>
-                  <a href="#" onclick="downloadResult('<%= order.id %>', '<%= order.result_filename || 'hasil.pdf' %>', '<%= order.result_filetype || '' %>', event)"
-                     class="text-xs text-green-400 font-medium">Download</a>
+                <% if (order.status === 'selesai' && order.result_files && order.result_files.length > 0) { %>
+                  <button onclick="openModal('<%= order.id %>'); switchTab('info')" class="text-xs text-green-400 font-medium">Download</button>
                 <% } %>
               </div>
             </div>
@@ -213,9 +212,14 @@ function statusBadge(status, queueNumber) {
     atlantic_qr_image: o.atlantic_qr_image || null,
     atlantic_expired_at: o.atlantic_expired_at || null,
     queue_number: o.queue_number,
-    result_file: !!o.result_file,
-    result_filename: o.result_filename,
-    result_filetype: o.result_filetype,
+    // Multi-file: array metadata (tanpa buffer, download via endpoint)
+    result_files: (o.result_files || []).map((f, fi) => ({
+      name: f.name,
+      size: f.size,
+      uploaded_at: f.uploaded_at,
+      idx: fi,
+    })),
+    has_result: !!(o.result_files && o.result_files.length > 0),
     created_at: o.created_at,
     attachment_name: o.attachment_name,
   }))) %>;
@@ -271,6 +275,34 @@ function statusBadge(status, queueNumber) {
     const statusLabel = STATUS_LABEL[o.status] || o.status;
     const queueExtra  = o.status === 'antrian' && o.queue_number ? ` #${o.queue_number}` : '';
 
+    // Daftar file hasil (multi)
+    let resultFilesHTML = '';
+    if (o.result_files && o.result_files.length > 0) {
+      const fileIconEmoji = name => {
+        const ext = (name||'').split('.').pop().toLowerCase();
+        const m = {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',zip:'📦',mp4:'🎬',mp3:'🎵'};
+        return m[ext] || '📁';
+      };
+      resultFilesHTML = `
+        <div class="bg-gray-800 rounded-xl p-3 col-span-2">
+          <p class="text-xs text-gray-500 mb-2">File Hasil (${o.result_files.length} file)</p>
+          <div class="space-y-2">
+            ${o.result_files.map(f => `
+              <div class="flex items-center gap-2.5 bg-gray-700/50 rounded-xl px-3 py-2.5">
+                <span class="text-base">${fileIconEmoji(f.name)}</span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-xs text-white font-medium truncate">${f.name}</p>
+                  <p class="text-xs text-gray-500">${(f.size/1024/1024).toFixed(2)} MB</p>
+                </div>
+                <a href="/orders/${o.id}/download/${f.idx}"
+                   class="px-2.5 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-semibold rounded-lg transition-colors shrink-0">
+                  ↓
+                </a>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
     document.getElementById('panel-info').innerHTML = `
       <div class="grid grid-cols-2 gap-2.5">
         <div class="bg-gray-800 rounded-xl p-3 col-span-2">
@@ -298,13 +330,7 @@ function statusBadge(status, queueNumber) {
             <p class="text-xs text-gray-500 mb-1">Lampiran</p>
             <p class="text-gray-300 text-xs">📎 ${o.attachment_name}</p>
           </div>` : ''}
-        ${o.result_file ? `
-          <div class="col-span-2 pt-1">
-            <button onclick="downloadResult('${o.id}','${o.result_filename||'hasil.pdf'}','${o.result_filetype||''}')"
-                    class="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl text-sm transition-colors">
-              ⬇ Download Hasil
-            </button>
-          </div>` : ''}
+        ${resultFilesHTML}
         ${o.payment_status !== 'success' ? `
           <div class="col-span-2 pt-1">
             <button onclick="switchTab('payment')"
@@ -526,19 +552,6 @@ function statusBadge(status, queueNumber) {
       el.className = BADGE[status] || '';
       el.textContent = LABEL[status] || status;
     });
-  }
-
-  // ── Download result ──────────────────────────────────────────────────────────
-  async function downloadResult(orderId, filename, filetype) {
-    try {
-      const res  = await fetch('/api/orders/' + orderId);
-      const data = await res.json();
-      if (!data.order?.result_file) return alert('File tidak tersedia');
-      const link = document.createElement('a');
-      link.href = `data:${filetype||'application/octet-stream'};base64,${data.order.result_file}`;
-      link.download = filename;
-      link.click();
-    } catch { alert('Gagal mengunduh file'); }
   }
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
