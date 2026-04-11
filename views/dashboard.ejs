@@ -160,21 +160,41 @@ function statusBadge(status, queueNumber) {
 <div id="order-modal" class="fixed inset-0 z-50 hidden">
   <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeModal()"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="relative bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-lg font-semibold text-white">Detail Pesanan</h3>
+    <div class="relative bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+
+      <%# Header modal %>
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800 sticky top-0 bg-gray-900 rounded-t-2xl z-10">
+        <h3 class="text-base font-semibold text-white" id="modal-title">Detail Pesanan</h3>
         <button onclick="closeModal()" class="text-gray-500 hover:text-white transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
-      <div id="modal-content" class="space-y-4 text-sm"></div>
+
+      <%# Tab nav %>
+      <div class="flex border-b border-gray-800" id="modal-tabs">
+        <button onclick="switchTab('info')" id="tab-info"
+                class="flex-1 py-2.5 text-xs font-semibold text-white border-b-2 border-indigo-500 transition-colors">
+          Info Pesanan
+        </button>
+        <button onclick="switchTab('payment')" id="tab-payment"
+                class="flex-1 py-2.5 text-xs font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-300 transition-colors">
+          Pembayaran
+        </button>
+      </div>
+
+      <%# Tab: Info %>
+      <div id="panel-info" class="p-5 space-y-3 text-sm"></div>
+
+      <%# Tab: Pembayaran %>
+      <div id="panel-payment" class="p-5 hidden text-sm"></div>
+
     </div>
   </div>
 </div>
 
-<%# Inject order data for JS %>
+<%# Inject order data %>
 <script>
   const ORDERS = <%- JSON.stringify(orders.map(o => ({
     id: o.id,
@@ -182,8 +202,16 @@ function statusBadge(status, queueNumber) {
     title: o.title,
     description: o.description,
     price: o.price,
+    grand_total: o.grand_total || null,
+    fee_flat: o.fee_flat || null,
+    fee_percent: o.fee_percent || null,
+    fee_total: o.fee_total || null,
     status: o.status,
     payment_status: o.payment_status,
+    payment_method: o.payment_method || null,
+    atlantic_tx_id: o.atlantic_tx_id || null,
+    atlantic_qr_image: o.atlantic_qr_image || null,
+    atlantic_expired_at: o.atlantic_expired_at || null,
     queue_number: o.queue_number,
     result_file: !!o.result_file,
     result_filename: o.result_filename,
@@ -194,66 +222,324 @@ function statusBadge(status, queueNumber) {
 
   const STATUS_LABEL = {
     menunggu_pembayaran: '⏳ Menunggu Pembayaran',
-    antrian: '🔵 Dalam Antrian',
-    dikerjakan: '🟠 Sedang Dikerjakan',
-    selesai: '✅ Selesai',
+    antrian:             '🔵 Dalam Antrian',
+    dikerjakan:          '🟠 Sedang Dikerjakan',
+    selesai:             '✅ Selesai',
   };
 
+  let currentOrderId = null;
+  let pollTimer = null;
+  let countdownTimer = null;
+
+  // ── Tab switch ──────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    const isInfo = tab === 'info';
+    document.getElementById('panel-info').classList.toggle('hidden', !isInfo);
+    document.getElementById('panel-payment').classList.toggle('hidden', isInfo);
+    document.getElementById('tab-info').className =
+      `flex-1 py-2.5 text-xs font-semibold transition-colors ${isInfo ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 border-b-2 border-transparent hover:text-gray-300'}`;
+    document.getElementById('tab-payment').className =
+      `flex-1 py-2.5 text-xs font-semibold transition-colors ${!isInfo ? 'text-white border-b-2 border-indigo-500' : 'text-gray-500 border-b-2 border-transparent hover:text-gray-300'}`;
+  }
+
+  // ── Open modal ──────────────────────────────────────────────────────────────
   function openModal(id) {
     const o = ORDERS.find(x => x.id === id);
     if (!o) return;
-    const content = document.getElementById('modal-content');
-    content.innerHTML = `
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-gray-800 rounded-xl p-3 col-span-2">
-          <p class="text-xs text-gray-500 mb-1">Layanan</p>
-          <p class="text-white font-medium">${o.service_name}</p>
-        </div>
+    currentOrderId = id;
+
+    document.getElementById('modal-title').textContent = o.service_name;
+    renderInfoTab(o);
+    renderPaymentTab(o);
+    switchTab('info');
+
+    document.getElementById('order-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    clearInterval(pollTimer);
+    clearInterval(countdownTimer);
+    document.getElementById('order-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+    currentOrderId = null;
+  }
+
+  // ── Info Tab ────────────────────────────────────────────────────────────────
+  function renderInfoTab(o) {
+    const fmt = n => 'Rp ' + Number(n).toLocaleString('id-ID');
+    const statusLabel = STATUS_LABEL[o.status] || o.status;
+    const queueExtra  = o.status === 'antrian' && o.queue_number ? ` #${o.queue_number}` : '';
+
+    document.getElementById('panel-info').innerHTML = `
+      <div class="grid grid-cols-2 gap-2.5">
         <div class="bg-gray-800 rounded-xl p-3 col-span-2">
           <p class="text-xs text-gray-500 mb-1">Judul Tugas</p>
-          <p class="text-white">${o.title}</p>
+          <p class="text-white font-medium text-sm">${o.title}</p>
         </div>
         <div class="bg-gray-800 rounded-xl p-3 col-span-2">
           <p class="text-xs text-gray-500 mb-1">Deskripsi</p>
           <p class="text-gray-300 text-xs leading-relaxed whitespace-pre-wrap">${o.description}</p>
         </div>
         <div class="bg-gray-800 rounded-xl p-3">
-          <p class="text-xs text-gray-500 mb-1">Harga</p>
-          <p class="text-indigo-400 font-bold">Rp ${Number(o.price).toLocaleString('id-ID')}</p>
+          <p class="text-xs text-gray-500 mb-1">Harga Layanan</p>
+          <p class="text-indigo-400 font-bold">${fmt(o.price)}</p>
         </div>
         <div class="bg-gray-800 rounded-xl p-3">
           <p class="text-xs text-gray-500 mb-1">Status</p>
-          <p class="text-white">${STATUS_LABEL[o.status] || o.status}${o.status==='antrian' && o.queue_number ? ' #'+o.queue_number : ''}</p>
+          <p class="text-white text-xs font-medium">${statusLabel}${queueExtra}</p>
         </div>
         <div class="bg-gray-800 rounded-xl p-3 col-span-2">
-          <p class="text-xs text-gray-500 mb-1">Tanggal Pesanan</p>
-          <p class="text-white">${new Date(o.created_at).toLocaleString('id-ID')}</p>
+          <p class="text-xs text-gray-500 mb-1">Tanggal Pesan</p>
+          <p class="text-white text-xs">${new Date(o.created_at).toLocaleString('id-ID')}</p>
         </div>
-        ${o.attachment_name ? `<div class="bg-gray-800 rounded-xl p-3 col-span-2"><p class="text-xs text-gray-500 mb-1">Lampiran</p><p class="text-gray-300">📎 ${o.attachment_name}</p></div>` : ''}
-        ${o.result_file ? `<div class="col-span-2"><a href="#" onclick="downloadResult('${o.id}','${o.result_filename||'hasil.pdf'}','${o.result_filetype||''}',event)" class="block w-full text-center py-2.5 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl text-sm transition-colors">⬇ Download Hasil</a></div>` : ''}
+        ${o.attachment_name ? `
+          <div class="bg-gray-800 rounded-xl p-3 col-span-2">
+            <p class="text-xs text-gray-500 mb-1">Lampiran</p>
+            <p class="text-gray-300 text-xs">📎 ${o.attachment_name}</p>
+          </div>` : ''}
+        ${o.result_file ? `
+          <div class="col-span-2 pt-1">
+            <button onclick="downloadResult('${o.id}','${o.result_filename||'hasil.pdf'}','${o.result_filetype||''}')"
+                    class="w-full py-2.5 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl text-sm transition-colors">
+              ⬇ Download Hasil
+            </button>
+          </div>` : ''}
+        ${o.payment_status !== 'success' ? `
+          <div class="col-span-2 pt-1">
+            <button onclick="switchTab('payment')"
+                    class="w-full py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-semibold rounded-xl text-sm transition-colors">
+              💳 Bayar Sekarang
+            </button>
+          </div>` : ''}
       </div>`;
-    document.getElementById('order-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
   }
 
-  function closeModal() {
-    document.getElementById('order-modal').classList.add('hidden');
-    document.body.style.overflow = '';
+  // ── Payment Tab ─────────────────────────────────────────────────────────────
+  function renderPaymentTab(o) {
+    const fmt = n => 'Rp ' + Number(n).toLocaleString('id-ID');
+    const panel = document.getElementById('panel-payment');
+
+    // Sudah lunas
+    if (o.payment_status === 'success') {
+      panel.innerHTML = `
+        <div class="text-center py-8">
+          <div class="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <p class="text-green-400 font-semibold mb-1">Pembayaran Lunas</p>
+          <p class="text-gray-400 text-xs">Pesanan Anda sedang diproses</p>
+        </div>`;
+      return;
+    }
+
+    // QR sudah dibuat, tinggal scan
+    if (o.atlantic_qr_image && o.payment_status === 'pending' && o.payment_method === 'qris') {
+      renderQRPanel(o, panel);
+      startPolling(o.id);
+      startCountdown(o.atlantic_expired_at);
+      return;
+    }
+
+    // Belum buat tagihan → tampilkan ringkasan fee + tombol buat QRIS
+    const feeFlat    = 1000;
+    const feePercent = Math.ceil(o.price * 0.007);
+    const feeTotal   = feeFlat + feePercent;
+    const grandTotal = o.price + feeTotal;
+
+    panel.innerHTML = `
+      <div class="space-y-3">
+        <p class="text-xs text-gray-400 mb-3">Bayar dengan <span class="text-white font-semibold">QRIS</span> — scan dari aplikasi apapun</p>
+
+        <%# Rincian harga %>
+        <div class="bg-gray-800 rounded-xl p-4 space-y-2 text-xs">
+          <div class="flex justify-between text-gray-400">
+            <span>Harga layanan</span><span class="text-white">${fmt(o.price)}</span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>Biaya admin</span><span class="text-white">${fmt(feeFlat)}</span>
+          </div>
+          <div class="flex justify-between text-gray-400">
+            <span>Biaya QRIS (0,7%)</span><span class="text-white">${fmt(feePercent)}</span>
+          </div>
+          <div class="border-t border-gray-700 pt-2 flex justify-between font-semibold">
+            <span class="text-gray-300">Total Bayar</span>
+            <span class="text-indigo-400 text-sm">${fmt(grandTotal)}</span>
+          </div>
+        </div>
+
+        <div id="pay-error" class="hidden p-3 bg-red-950 border border-red-800 rounded-xl text-xs text-red-400"></div>
+
+        <button onclick="createQRIS('${o.id}')" id="btn-create-qr"
+                class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
+          <span id="btn-create-text">Buat QRIS & Bayar</span>
+          <svg id="btn-create-spin" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+        </button>
+        <p class="text-center text-xs text-gray-600">QR berlaku 60 menit setelah dibuat</p>
+      </div>`;
   }
 
-  async function downloadResult(orderId, filename, filetype, e) {
-    e.preventDefault();
+  function renderQRPanel(o, panel) {
+    const fmt = n => 'Rp ' + Number(n).toLocaleString('id-ID');
+    panel.innerHTML = `
+      <div class="text-center space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse"></span>
+          Menunggu Pembayaran
+        </div>
+
+        <p class="text-xs text-gray-400">Scan QR dengan aplikasi e-wallet atau mobile banking</p>
+
+        <div class="inline-block p-3 bg-white rounded-2xl">
+          <img src="${o.atlantic_qr_image}" alt="QRIS" class="w-44 h-44 object-contain"/>
+        </div>
+
+        <div>
+          <p class="text-lg font-bold text-white">${fmt(o.grand_total || o.price)}</p>
+          ${o.fee_total ? `<p class="text-xs text-gray-500">sudah termasuk biaya Rp ${Number(o.fee_total).toLocaleString('id-ID')}</p>` : ''}
+        </div>
+
+        <div class="flex items-center justify-center gap-2 text-xs text-gray-500">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Berlaku: <span id="modal-countdown" class="font-mono text-white font-semibold">--:--</span>
+        </div>
+
+        <div id="modal-poll-status" class="flex items-center justify-center gap-1.5 text-xs text-gray-500">
+          <svg class="w-3.5 h-3.5 animate-spin text-indigo-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          Memeriksa status...
+        </div>
+      </div>`;
+  }
+
+  // ── Create QRIS ─────────────────────────────────────────────────────────────
+  async function createQRIS(orderId) {
+    const btn  = document.getElementById('btn-create-qr');
+    const text = document.getElementById('btn-create-text');
+    const spin = document.getElementById('btn-create-spin');
+    const err  = document.getElementById('pay-error');
+    if (err) err.classList.add('hidden');
+    if (btn) btn.disabled = true;
+    if (text) text.textContent = 'Memproses...';
+    if (spin) spin.classList.remove('hidden');
+
     try {
-      const res = await fetch('/api/orders/' + orderId);
+      const res = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, metode: 'qris' }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Gagal membuat tagihan');
+
+      // Update order di local state
+      const o = ORDERS.find(x => x.id === orderId);
+      if (o) {
+        o.atlantic_qr_image  = data.qr_image;
+        o.atlantic_expired_at = data.expired_at;
+        o.payment_method     = 'qris';
+        o.payment_status     = 'pending';
+        o.grand_total        = data.grand_total;
+        o.fee_total          = data.fee_total;
+      }
+
+      const panel = document.getElementById('panel-payment');
+      renderQRPanel(o, panel);
+      startPolling(orderId);
+      startCountdown(data.expired_at);
+    } catch (e) {
+      if (err) { err.textContent = e.message; err.classList.remove('hidden'); }
+      if (btn) btn.disabled = false;
+      if (text) text.textContent = 'Buat QRIS & Bayar';
+      if (spin) spin.classList.add('hidden');
+    }
+  }
+
+  // ── Countdown ────────────────────────────────────────────────────────────────
+  function startCountdown(expiredAt) {
+    clearInterval(countdownTimer);
+    const expiry = new Date(expiredAt).getTime();
+    countdownTimer = setInterval(() => {
+      const el = document.getElementById('modal-countdown');
+      if (!el) return clearInterval(countdownTimer);
+      const rem = expiry - Date.now();
+      if (rem <= 0) { el.textContent = '00:00'; el.classList.add('text-red-400'); return; }
+      const m = Math.floor(rem / 60000);
+      const s = Math.floor((rem % 60000) / 1000);
+      el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      if (rem < 120000) el.classList.add('text-red-400');
+    }, 1000);
+  }
+
+  // ── Polling ──────────────────────────────────────────────────────────────────
+  function startPolling(orderId) {
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/payment/status/' + orderId);
+        const data = await res.json();
+        if (data.payment_status === 'success') {
+          clearInterval(pollTimer);
+          clearInterval(countdownTimer);
+
+          // Update local state
+          const o = ORDERS.find(x => x.id === orderId);
+          if (o) { o.payment_status = 'success'; o.status = 'antrian'; }
+
+          // Update badge di tabel
+          updateRowBadge(orderId, 'antrian');
+
+          // Tampilkan sukses
+          const panel = document.getElementById('panel-payment');
+          if (panel) panel.innerHTML = `
+            <div class="text-center py-8">
+              <div class="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </div>
+              <p class="text-green-400 font-semibold mb-1">Pembayaran Berhasil! 🎉</p>
+              <p class="text-gray-400 text-xs mb-4">Pesanan masuk antrian pengerjaan</p>
+              <button onclick="closeModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-colors">Tutup</button>
+            </div>`;
+        }
+      } catch { /* silent */ }
+    }, 5000);
+  }
+
+  // ── Update row badge tanpa reload ────────────────────────────────────────────
+  function updateRowBadge(orderId, status) {
+    const BADGE = {
+      antrian: 'px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-500/20 text-blue-400 border-blue-500/30',
+    };
+    const LABEL = { antrian: 'Antrian' };
+    document.querySelectorAll(`[data-order-id="${orderId}"] .status-badge`).forEach(el => {
+      el.className = BADGE[status] || '';
+      el.textContent = LABEL[status] || status;
+    });
+  }
+
+  // ── Download result ──────────────────────────────────────────────────────────
+  async function downloadResult(orderId, filename, filetype) {
+    try {
+      const res  = await fetch('/api/orders/' + orderId);
       const data = await res.json();
       if (!data.order?.result_file) return alert('File tidak tersedia');
       const link = document.createElement('a');
-      link.href = `data:${filetype || 'application/octet-stream'};base64,${data.order.result_file}`;
+      link.href = `data:${filetype||'application/octet-stream'};base64,${data.order.result_file}`;
       link.download = filename;
       link.click();
     } catch { alert('Gagal mengunduh file'); }
   }
 
-  // Tutup modal dengan ESC
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 </script>
