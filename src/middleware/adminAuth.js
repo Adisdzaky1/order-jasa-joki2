@@ -1,10 +1,12 @@
 // src/middleware/adminAuth.js
 
 /**
- * Middleware: cek apakah session admin aktif.
- * Admin login menggunakan username/password hardcode (bukan Firebase).
+ * Middleware: verifikasi signed cookie admin_token.
+ * Cookie diset saat login admin, berlaku 30 hari.
+ * Menggunakan cookie-parser signed cookies (bukan session).
  */
 module.exports = (req, res, next) => {
-  if (req.session?.isAdmin) return next();
+  const token = req.signedCookies?.admin_token;
+  if (token === 'authenticated') return next();
   res.redirect('/admin/login');
 };
