@@ -106,10 +106,12 @@ router.get('/dashboard', firebaseAuth, async (req, res) => {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     const stats = {
-      total: myOrders.length,
-      menunggu: myOrders.filter((o) => o.payment_status === 'pending').length,
-      dikerjakan: myOrders.filter((o) => o.status === 'dikerjakan').length,
-      selesai: myOrders.filter((o) => o.status === 'selesai').length,
+      total:      myOrders.length,
+      // "Menunggu Bayar" = belum bayar (status masih menunggu_pembayaran)
+      menunggu:   myOrders.filter((o) => o.status === 'menunggu_pembayaran').length,
+      // "Dikerjakan" = status antrian ATAU dikerjakan (sudah bayar, belum selesai)
+      dikerjakan: myOrders.filter((o) => o.status === 'antrian' || o.status === 'dikerjakan').length,
+      selesai:    myOrders.filter((o) => o.status === 'selesai').length,
     };
 
     res.render('dashboard', {

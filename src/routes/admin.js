@@ -136,6 +136,91 @@ router.get('/pesanan/:id', adminAuth, async (req, res) => {
   }
 });
 
+// ─── GET /admin/layanan ───────────────────────────────────────────────────────
+router.get('/layanan', adminAuth, async (req, res) => {
+  try {
+    const { json: services } = await readFile('data/services.json');
+    res.render('admin/layanan', {
+      layout: 'layouts/admin',
+      title:  'Kelola Layanan',
+      services,
+      flash:  _popFlash(req, res),
+    });
+  } catch (err) {
+    res.status(500).send('Gagal memuat layanan: ' + err.message);
+  }
+});
+
+// ─── POST /admin/layanan/add ──────────────────────────────────────────────────
+router.post('/layanan/add', adminAuth, async (req, res) => {
+  try {
+    const { name, description, price, estimasi, category, icon, features } = req.body;
+    if (!name || !price) {
+      _setFlash(res, 'error', 'Nama dan harga wajib diisi');
+      return res.redirect('/admin/layanan');
+    }
+    const { json: services, sha } = await readFile('data/services.json');
+    services.push({
+      id:          'sv' + String(Date.now()).slice(-6),
+      name:        name.trim(),
+      description: (description || '').trim(),
+      price:       Number(price),
+      estimasi:    (estimasi || '').trim(),
+      category:    (category || 'lainnya').trim(),
+      icon:        (icon || '📄').trim(),
+      features:    (features || '').split('\n').map(f => f.trim()).filter(Boolean),
+    });
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Layanan berhasil ditambahkan`);
+    res.redirect('/admin/layanan');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal menambah: ' + err.message);
+    res.redirect('/admin/layanan');
+  }
+});
+
+// ─── POST /admin/layanan/:id/edit ─────────────────────────────────────────────
+router.post('/layanan/:id/edit', adminAuth, async (req, res) => {
+  try {
+    const { name, description, price, estimasi, category, icon, features } = req.body;
+    const { json: services, sha } = await readFile('data/services.json');
+    const idx = services.findIndex((s) => s.id === req.params.id);
+    if (idx === -1) { _setFlash(res, 'error', 'Layanan tidak ditemukan'); return res.redirect('/admin/layanan'); }
+    services[idx] = {
+      ...services[idx],
+      name:        name.trim(),
+      description: (description || '').trim(),
+      price:       Number(price),
+      estimasi:    (estimasi || '').trim(),
+      category:    (category || services[idx].category).trim(),
+      icon:        (icon || services[idx].icon).trim(),
+      features:    (features || '').split('\n').map(f => f.trim()).filter(Boolean),
+    };
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Layanan "${services[idx].name}" berhasil diperbarui`);
+    res.redirect('/admin/layanan');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal mengubah: ' + err.message);
+    res.redirect('/admin/layanan');
+  }
+});
+
+// ─── POST /admin/layanan/:id/delete ──────────────────────────────────────────
+router.post('/layanan/:id/delete', adminAuth, async (req, res) => {
+  try {
+    const { json: services, sha } = await readFile('data/services.json');
+    const idx = services.findIndex((s) => s.id === req.params.id);
+    if (idx === -1) { _setFlash(res, 'error', 'Layanan tidak ditemukan'); return res.redirect('/admin/layanan'); }
+    const [removed] = services.splice(idx, 1);
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Layanan "${removed.name}" berhasil dihapus`);
+    res.redirect('/admin/layanan');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal menghapus: ' + err.message);
+    res.redirect('/admin/layanan');
+  }
+});
+
 // ─── POST /admin/orders/:id/update ───────────────────────────────────────────
 router.post(
   '/orders/:id/update',
@@ -253,5 +338,101 @@ function _popFlash(req, res) {
   res.clearCookie('admin_flash');
   return flash;
 }
+
+// ─── GET /admin/jasa ──────────────────────────────────────────────────────────
+router.get('/jasa', adminAuth, async (req, res) => {
+  try {
+    const { json: services } = await readFile('data/services.json');
+    res.render('admin/jasa', {
+      layout: 'layouts/admin',
+      title: 'Kelola Jasa',
+      services,
+      flash: _popFlash(req, res),
+    });
+  } catch (err) {
+    res.status(500).send('Gagal memuat jasa: ' + err.message);
+  }
+});
+
+// ─── POST /admin/jasa/create ──────────────────────────────────────────────────
+router.post('/jasa/create', adminAuth, async (req, res) => {
+  try {
+    const { name, description, price, estimasi, category, icon, features } = req.body;
+    if (!name || !price) {
+      _setFlash(res, 'error', 'Nama dan harga wajib diisi');
+      return res.redirect('/admin/jasa');
+    }
+    const { json: services, sha } = await readFile('data/services.json');
+    const newService = {
+      id:          'sv' + Date.now(),
+      name:        name.trim(),
+      description: (description || '').trim(),
+      price:       Number(price),
+      estimasi:    (estimasi || '3-7 hari').trim(),
+      category:    (category || 'lainnya').trim(),
+      icon:        (icon || '📋').trim(),
+      features:    features
+        ? features.split('\n').map(f => f.trim()).filter(Boolean)
+        : [],
+    };
+    services.push(newService);
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Jasa "${name}" berhasil ditambahkan`);
+    res.redirect('/admin/jasa');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal menambah jasa: ' + err.message);
+    res.redirect('/admin/jasa');
+  }
+});
+
+// ─── POST /admin/jasa/:id/edit ────────────────────────────────────────────────
+router.post('/jasa/:id/edit', adminAuth, async (req, res) => {
+  try {
+    const { name, description, price, estimasi, category, icon, features } = req.body;
+    const { json: services, sha } = await readFile('data/services.json');
+    const idx = services.findIndex(s => s.id === req.params.id);
+    if (idx === -1) {
+      _setFlash(res, 'error', 'Jasa tidak ditemukan');
+      return res.redirect('/admin/jasa');
+    }
+    services[idx] = {
+      ...services[idx],
+      name:        name.trim(),
+      description: (description || '').trim(),
+      price:       Number(price),
+      estimasi:    (estimasi || '3-7 hari').trim(),
+      category:    (category || 'lainnya').trim(),
+      icon:        (icon || '📋').trim(),
+      features:    features
+        ? features.split('\n').map(f => f.trim()).filter(Boolean)
+        : services[idx].features,
+    };
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Jasa "${name}" berhasil diperbarui`);
+    res.redirect('/admin/jasa');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal edit jasa: ' + err.message);
+    res.redirect('/admin/jasa');
+  }
+});
+
+// ─── POST /admin/jasa/:id/delete ─────────────────────────────────────────────
+router.post('/jasa/:id/delete', adminAuth, async (req, res) => {
+  try {
+    const { json: services, sha } = await readFile('data/services.json');
+    const idx = services.findIndex(s => s.id === req.params.id);
+    if (idx === -1) {
+      _setFlash(res, 'error', 'Jasa tidak ditemukan');
+      return res.redirect('/admin/jasa');
+    }
+    const [removed] = services.splice(idx, 1);
+    await writeFile('data/services.json', services, sha);
+    _setFlash(res, 'success', `Jasa "${removed.name}" berhasil dihapus`);
+    res.redirect('/admin/jasa');
+  } catch (err) {
+    _setFlash(res, 'error', 'Gagal hapus jasa: ' + err.message);
+    res.redirect('/admin/jasa');
+  }
+});
 
 module.exports = router;
