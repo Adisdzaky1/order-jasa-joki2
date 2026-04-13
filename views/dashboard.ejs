@@ -7,7 +7,7 @@ function statusBadge(status, queueNumber) {
     menunggu_pembayaran: ['bg-yellow-500/20 text-yellow-400 border-yellow-500/30', 'Menunggu Pembayaran'],
     antrian:             ['bg-blue-500/20 text-blue-400 border-blue-500/30',   'Antrian'],
     dikerjakan:          ['bg-orange-500/20 text-orange-400 border-orange-500/30', 'Dikerjakan'],
-    selesai:            ['bg-green-500/20 text-green-400 border-green-500/30', 'Selesai'],
+    selesai:             ['bg-green-500/20 text-green-400 border-green-500/30', 'Selesai'],
   };
   const [cls, label] = map[status] || ['bg-gray-500/20 text-gray-400 border-gray-500/30', status];
   const extra = status === 'antrian' && queueNumber ? ` #${queueNumber}` : '';
@@ -47,10 +47,10 @@ function statusBadge(status, queueNumber) {
   <%# ── Stats Cards ──────────────────────────────────────────────────────────── %>
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <% [
-      { label:'Total Pesanan', value: stats.total, icon:'📋', color:'indigo' },
-      { label:'Menunggu',      value: stats.menunggu, icon:'⏳', color:'yellow' },
-      { label:'Dikerjakan',    value: stats.dikerjakan, icon:'⚡', color:'orange' },
-      { label:'Selesai',       value: stats.selesai, icon:'✅', color:'green' },
+      { label:'Total Pesanan', value: stats.total,      icon:'📋', color:'indigo' },
+      { label:'Belum Bayar',   value: stats.menunggu,   icon:'⏳', color:'yellow' },
+      { label:'Diproses',      value: stats.dikerjakan, icon:'⚡', color:'orange' },
+      { label:'Selesai',       value: stats.selesai,    icon:'✅', color:'green' },
     ].forEach(s => { %>
       <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
         <div class="text-2xl mb-2"><%= s.icon %></div>
@@ -220,7 +220,11 @@ function statusBadge(status, queueNumber) {
       idx: fi,
     })),
     has_result: !!(o.result_files && o.result_files.length > 0),
-    created_at: o.created_at,
+    // Lampiran (multi-file dari GitHub)
+    attachments: (o.attachments || []).map((a, ai) => ({
+      name: a.name, size: a.size, idx: ai,
+    })),
+    // Legacy single attachment
     attachment_name: o.attachment_name,
   }))) %>;
 
@@ -274,15 +278,15 @@ function statusBadge(status, queueNumber) {
     const fmt = n => 'Rp ' + Number(n).toLocaleString('id-ID');
     const statusLabel = STATUS_LABEL[o.status] || o.status;
     const queueExtra  = o.status === 'antrian' && o.queue_number ? ` #${o.queue_number}` : '';
-
+    const fileIconEmoji = name => {
+      const ext = (name||'').split('.').pop().toLowerCase();
+      const m = {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',jpg:'🖼️',jpeg:'🖼️',
+                 png:'🖼️',zip:'📦',rar:'📦',mp4:'🎬',mp3:'🎵',ppt:'📋',pptx:'📋'};
+      return m[ext] || '📁';
+    };
     // Daftar file hasil (multi)
     let resultFilesHTML = '';
     if (o.result_files && o.result_files.length > 0) {
-      const fileIconEmoji = name => {
-        const ext = (name||'').split('.').pop().toLowerCase();
-        const m = {pdf:'📄',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',zip:'📦',mp4:'🎬',mp3:'🎵'};
-        return m[ext] || '📁';
-      };
       resultFilesHTML = `
         <div class="bg-gray-800 rounded-xl p-3 col-span-2">
           <p class="text-xs text-gray-500 mb-2">File Hasil (${o.result_files.length} file)</p>
@@ -325,7 +329,18 @@ function statusBadge(status, queueNumber) {
           <p class="text-xs text-gray-500 mb-1">Tanggal Pesan</p>
           <p class="text-white text-xs">${new Date(o.created_at).toLocaleString('id-ID')}</p>
         </div>
-        ${o.attachment_name ? `
+        ${o.attachments && o.attachments.length ? `
+          <div class="bg-gray-800 rounded-xl p-3 col-span-2">
+            <p class="text-xs text-gray-500 mb-2">Lampiran (${o.attachments.length} file)</p>
+            <div class="space-y-1.5">
+              ${o.attachments.map(a => `
+                <div class="flex items-center gap-2 bg-gray-700/50 rounded-lg px-2.5 py-2">
+                  <span class="text-sm">${fileIconEmoji(a.name)}</span>
+                  <span class="text-xs text-gray-300 flex-1 truncate">${a.name}</span>
+                  <span class="text-xs text-gray-500">${(a.size/1024/1024).toFixed(2)}MB</span>
+                </div>`).join('')}
+            </div>
+          </div>` : o.attachment_name ? `
           <div class="bg-gray-800 rounded-xl p-3 col-span-2">
             <p class="text-xs text-gray-500 mb-1">Lampiran</p>
             <p class="text-gray-300 text-xs">📎 ${o.attachment_name}</p>

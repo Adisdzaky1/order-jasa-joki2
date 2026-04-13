@@ -26,14 +26,39 @@
   </div>
 
   <%# Ringkasan Order %>
+  <%
+    const _price      = order.price;
+    const _feeFlat    = 1000;
+    const _feePct     = Math.ceil(_price * 0.007);
+    const _feeTotal   = _feeFlat + _feePct;
+    const _grandTotal = _price + _feeTotal;
+    function _fmt(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+  %>
   <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-5">
-    <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Ringkasan Pesanan</h3>
-    <div class="flex justify-between items-start">
-      <div>
-        <p class="text-white font-medium"><%= order.service_name %></p>
-        <p class="text-sm text-gray-400 mt-0.5 truncate max-w-xs"><%= order.title %></p>
+    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Ringkasan Pesanan</h3>
+
+    <div class="mb-3">
+      <p class="text-white font-medium"><%= order.service_name %></p>
+      <p class="text-sm text-gray-400 mt-0.5 truncate"><%= order.title %></p>
+    </div>
+
+    <div class="space-y-2 text-sm border-t border-gray-800 pt-3">
+      <div class="flex justify-between text-gray-400">
+        <span>Harga layanan</span>
+        <span class="text-gray-200"><%= _fmt(_price) %></span>
       </div>
-      <p class="text-indigo-400 font-bold text-lg shrink-0 ml-4">Rp <%= order.price.toLocaleString('id-ID') %></p>
+      <div class="flex justify-between text-gray-400">
+        <span>Biaya admin</span>
+        <span class="text-gray-200"><%= _fmt(_feeFlat) %></span>
+      </div>
+      <div class="flex justify-between text-gray-400">
+        <span>Biaya QRIS (0,7%)</span>
+        <span class="text-gray-200"><%= _fmt(_feePct) %></span>
+      </div>
+      <div class="flex justify-between font-bold pt-2 border-t border-gray-700">
+        <span class="text-white">Total Bayar</span>
+        <span class="text-indigo-400 text-base"><%= _fmt(_grandTotal) %></span>
+      </div>
     </div>
   </div>
 
