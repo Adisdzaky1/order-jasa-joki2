@@ -28,6 +28,9 @@ const resultFiles = order.result_files || [];
       <span class="px-2.5 py-1 rounded-full text-xs font-semibold border <%= sc.cls %>">
         <%= sc.label %><% if(order.status==='antrian' && order.queue_number){ %> #<%= order.queue_number %><% } %>
       </span>
+      <% if (order.is_custom) { %>
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold border bg-violet-500/20 text-violet-400 border-violet-500/30">✨ Custom</span>
+      <% } %>
     </div>
     <p class="text-gray-500 text-xs">
       <%= new Date(order.created_at).toLocaleString('id-ID', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) %>
