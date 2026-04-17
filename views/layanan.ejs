@@ -79,6 +79,56 @@
         </div>
       </div>
     <% }) %>
+
+    <%# ── Card Jasa Custom (selalu muncul, tidak terpengaruh filter) ── %>
+    <div class="service-card bg-gradient-to-br from-violet-900/40 to-indigo-900/40 border border-violet-700/50
+                rounded-2xl p-6 hover:border-violet-500 transition-all duration-300
+                hover:shadow-lg hover:shadow-violet-500/15 flex flex-col"
+         data-name="jasa custom" data-desc="custom bebas negosiasi" data-cat="custom">
+
+      <div class="flex items-start justify-between mb-4">
+        <div class="text-3xl">✨</div>
+        <span class="text-xs bg-violet-500/20 text-violet-400 border border-violet-500/30 px-2.5 py-1 rounded-full">Custom</span>
+      </div>
+
+      <h3 class="font-semibold text-white text-base mb-2">Jasa Custom</h3>
+      <p class="text-gray-400 text-sm leading-relaxed flex-1 mb-4">
+        Kebutuhan khusus yang tidak ada di daftar layanan? Ceritakan kepada kami! Admin akan mendiskusikan detail dan harga langsung dengan Anda.
+      </p>
+
+      <ul class="space-y-1.5 mb-5">
+        <% [
+          'Semua jenis pekerjaan diterima',
+          'Harga sesuai kesepakatan',
+          'Konsultasi gratis sebelum mulai',
+          'Deposit awal Rp 25.000',
+        ].forEach(f => { %>
+          <li class="flex items-center gap-2 text-xs text-gray-400">
+            <svg class="w-3.5 h-3.5 text-violet-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+            <%= f %>
+          </li>
+        <% }) %>
+      </ul>
+
+      <div class="border-t border-violet-700/30 pt-4 mt-auto">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-xs text-gray-500">Deposit awal</p>
+            <p class="text-violet-400 font-bold text-lg">Rp 25.000</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-gray-500">Estimasi</p>
+            <p class="text-gray-300 text-sm font-medium">Diskusi dulu</p>
+          </div>
+        </div>
+        <a href="/pesan/custom"
+           class="block w-full text-center bg-violet-600 hover:bg-violet-500 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm">
+          Pesan Custom
+        </a>
+      </div>
+    </div>
   </div>
 
   <%# Empty state %>

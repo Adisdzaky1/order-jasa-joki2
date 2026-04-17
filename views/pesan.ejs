@@ -7,11 +7,12 @@
   <div class="mb-8">
     <div class="flex items-center gap-2 text-sm text-gray-500 mb-6">
       <a href="/layanan" class="hover:text-gray-300 transition-colors">Layanan</a>
-      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
       <span class="text-gray-300"><%= service.name %></span>
     </div>
 
-    <%# Step indicator %>
     <div class="flex items-center gap-0">
       <% [['1','Detail Tugas'], ['2','Pembayaran'], ['3','Selesai']].forEach(([n,label], i) => { %>
         <div class="flex items-center <%= i < 2 ? 'flex-1' : '' %>">
@@ -22,9 +23,7 @@
             </div>
             <span class="text-sm <%= n === '1' ? 'text-white font-medium' : 'text-gray-500' %> hidden sm:block"><%= label %></span>
           </div>
-          <% if (i < 2) { %>
-            <div class="flex-1 h-px bg-gray-800 mx-3"></div>
-          <% } %>
+          <% if (i < 2) { %><div class="flex-1 h-px bg-gray-800 mx-3"></div><% } %>
         </div>
       <% }) %>
     </div>
@@ -35,21 +34,29 @@
     <%# ── Form Kiri ─────────────────────────────────────────────────────────── %>
     <div class="lg:col-span-2">
       <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-        <h2 class="text-lg font-semibold text-white mb-6">Detail Pesanan</h2>
+        <h2 class="text-lg font-semibold text-white mb-1">Detail Pesanan</h2>
+        <% if (service.isCustom) { %>
+          <p class="text-xs text-indigo-400 mb-5">✨ Jasa Custom — Admin akan menghubungi Anda untuk konfirmasi harga final</p>
+        <% } else { %>
+          <p class="text-xs text-gray-500 mb-5">Isi detail tugas Anda dengan lengkap agar kami dapat memproses pesanan dengan tepat</p>
+        <% } %>
 
         <div id="form-error" class="hidden mb-5 p-3.5 bg-red-950 border border-red-800 rounded-xl text-sm text-red-400"></div>
 
         <form id="order-form" enctype="multipart/form-data" class="space-y-5">
-          <input type="hidden" name="service_id" value="<%= service.id %>"/>
+          <input type="hidden" name="service_id"   value="<%= service.id %>"/>
           <input type="hidden" name="service_name" value="<%= service.name %>"/>
-          <input type="hidden" name="price" value="<%= service.price %>"/>
-          <input type="hidden" name="user_name" value="<%= user.name || '' %>"/>
+          <input type="hidden" name="price"        value="<%= service.price %>"/>
+          <input type="hidden" name="user_name"    value="<%= user.name || '' %>"/>
+          <input type="hidden" name="is_custom"    value="<%= service.isCustom ? '1' : '0' %>"/>
 
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
               Judul Tugas <span class="text-red-400">*</span>
             </label>
-            <input type="text" name="title" id="title" placeholder="Contoh: Skripsi Manajemen S1 Topik Digital Marketing"
+            <input type="text" name="title" id="title"
+                   placeholder="<%= service.isCustom ? 'Contoh: Buat website landing page + desain logo' : 'Contoh: Skripsi Manajemen S1 Topik Digital Marketing' %>"
+                   autocomplete="off"
                    class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-gray-100
                           focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-sm"/>
           </div>
@@ -59,47 +66,50 @@
               Deskripsi Lengkap <span class="text-red-400">*</span>
             </label>
             <textarea name="description" id="description" rows="5"
-                      placeholder="Jelaskan secara detail: topik, jumlah halaman, format, deadline, instruksi dosen, dll."
+                      placeholder="<%= service.isCustom ? 'Ceritakan kebutuhan Anda secara detail: jenis pekerjaan, deadline, referensi, budget yang diinginkan, dll.' : 'Jelaskan secara detail: topik, jumlah halaman, format, deadline, instruksi dosen, dll.' %>"
                       class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-gray-100
                              focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500
                              transition-colors text-sm resize-none"></textarea>
           </div>
 
-          <%# File Upload %>
+          <%# ── Multi-file Upload (simpan ke GitHub repo) ──────────────────── %>
           <div>
-            <label class="block text-sm font-medium text-gray-300 mb-2">
-              Lampiran <span class="text-gray-500 font-normal">(opsional — maks. 2MB)</span>
+            <label class="block text-sm font-medium text-gray-300 mb-1">
+              Lampiran
+              <span class="text-gray-500 font-normal text-xs">
+                (opsional · semua format · maks <strong class="text-gray-400">100MB</strong>/file · maks 10 file)
+              </span>
             </label>
+            <p class="text-xs text-gray-600 mb-2">File disimpan aman di server kami</p>
+
             <div id="drop-zone"
                  class="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center cursor-pointer
-                        hover:border-indigo-500 transition-colors group">
-              <input type="file" name="attachment" id="attachment" accept=".jpg,.jpeg,.png,.pdf,.docx" class="hidden"/>
-              <div id="upload-placeholder">
-                <svg class="w-8 h-8 text-gray-600 mx-auto mb-2 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        hover:border-indigo-500 hover:bg-indigo-600/5 transition-all group">
+              <input type="file" name="attachments" id="attachment" multiple class="hidden"/>
+              <svg class="w-9 h-9 text-gray-600 mx-auto mb-2 group-hover:text-indigo-400 transition-colors"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              <p class="text-sm text-gray-400 font-medium">Klik atau drag & drop file di sini</p>
+              <p class="text-xs text-gray-600 mt-1">Semua format diterima (PDF, DOCX, JPG, ZIP, dll) · Bisa pilih lebih dari 1 file</p>
+            </div>
+
+            <%# Preview file yang dipilih %>
+            <div id="file-list" class="mt-3 space-y-2 hidden"></div>
+            <div id="upload-progress" class="hidden mt-3">
+              <div class="flex items-center gap-2 text-xs text-indigo-400">
+                <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                 </svg>
-                <p class="text-sm text-gray-400">Klik atau drag & drop file di sini</p>
-                <p class="text-xs text-gray-600 mt-1">JPG, PNG, PDF, DOCX</p>
-              </div>
-              <div id="file-preview" class="hidden">
-                <div class="flex items-center justify-center gap-3">
-                  <span class="text-2xl" id="file-icon">📄</span>
-                  <div class="text-left">
-                    <p class="text-sm text-white font-medium" id="file-name"></p>
-                    <p class="text-xs text-gray-500" id="file-size"></p>
-                  </div>
-                  <button type="button" id="remove-file" class="ml-2 text-gray-500 hover:text-red-400 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
+                <span id="upload-progress-text">Mengupload file...</span>
               </div>
             </div>
           </div>
 
           <button type="submit" id="submit-btn"
-                  class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl
+                  class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl
                          transition-colors duration-200 text-sm flex items-center justify-center gap-2 disabled:opacity-60">
             <span id="submit-text">Lanjut ke Pembayaran →</span>
             <svg id="submit-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -123,12 +133,25 @@
             <span class="text-gray-400">Estimasi</span>
             <span class="text-gray-200 font-medium"><%= service.estimasi %></span>
           </div>
-          <div class="flex justify-between text-sm">
-            <span class="text-gray-400">Harga</span>
-            <span class="text-indigo-400 font-bold">Rp <%= service.price.toLocaleString('id-ID') %></span>
-          </div>
+          <% if (service.isCustom) { %>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Deposit awal</span>
+              <span class="text-indigo-400 font-bold">Rp 25.000</span>
+            </div>
+            <div class="p-3 bg-indigo-600/10 border border-indigo-500/20 rounded-xl mt-2">
+              <p class="text-xs text-indigo-300 leading-relaxed">
+                💡 Bayar deposit Rp 25.000 untuk konfirmasi pesanan. Admin akan menghubungi Anda untuk negosiasi harga dan detail pekerjaan.
+              </p>
+            </div>
+          <% } else { %>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-400">Harga</span>
+              <span class="text-indigo-400 font-bold">Rp <%= service.price.toLocaleString('id-ID') %></span>
+            </div>
+          <% } %>
         </div>
 
+        <% if (service.features && service.features.length > 0) { %>
         <div class="border-t border-gray-800 pt-4 mt-4">
           <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Termasuk</h4>
           <ul class="space-y-2">
@@ -142,91 +165,153 @@
             <% }) %>
           </ul>
         </div>
+        <% } %>
       </div>
     </div>
   </div>
 </section>
 
 <script>
-  // ── File Upload UX ──────────────────────────────────────────────────────────
-  const dropZone = document.getElementById('drop-zone');
+  // ── Multi-file Upload UX ─────────────────────────────────────────────────────
+  const dropZone  = document.getElementById('drop-zone');
   const fileInput = document.getElementById('attachment');
-  const placeholder = document.getElementById('upload-placeholder');
-  const preview = document.getElementById('file-preview');
-  const fileName = document.getElementById('file-name');
-  const fileSize = document.getElementById('file-size');
-  const fileIcon = document.getElementById('file-icon');
+  const fileList  = document.getElementById('file-list');
+  let selectedFiles = [];
 
-  dropZone.addEventListener('click', (e) => {
-    if (!e.target.closest('#remove-file')) fileInput.click();
-  });
+  dropZone.addEventListener('click', () => fileInput.click());
 
-  dropZone.addEventListener('dragover', (e) => {
+  dropZone.addEventListener('dragover', e => {
     e.preventDefault();
-    dropZone.classList.add('border-indigo-500');
+    dropZone.classList.add('border-indigo-500', 'bg-indigo-600/5');
   });
-
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500'));
-
-  dropZone.addEventListener('drop', (e) => {
+  dropZone.addEventListener('dragleave', () =>
+    dropZone.classList.remove('border-indigo-500', 'bg-indigo-600/5'));
+  dropZone.addEventListener('drop', e => {
     e.preventDefault();
-    dropZone.classList.remove('border-indigo-500');
-    const file = e.dataTransfer.files[0];
-    if (file) setFile(file);
+    dropZone.classList.remove('border-indigo-500', 'bg-indigo-600/5');
+    addFiles(Array.from(e.dataTransfer.files));
   });
+  fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
 
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files[0]) setFile(fileInput.files[0]);
-  });
-
-  document.getElementById('remove-file').addEventListener('click', (e) => {
-    e.stopPropagation();
-    fileInput.value = '';
-    placeholder.classList.remove('hidden');
-    preview.classList.add('hidden');
-  });
-
-  function setFile(file) {
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file maksimal 2MB');
-      return;
-    }
-    const icons = { 'application/pdf': '📄', 'image/jpeg': '🖼️', 'image/png': '🖼️',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝' };
-    fileIcon.textContent = icons[file.type] || '📁';
-    fileName.textContent = file.name;
-    fileSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
-    placeholder.classList.add('hidden');
-    preview.classList.remove('hidden');
+  function addFiles(files) {
+    const errEl = document.getElementById('form-error');
+    files.forEach(f => {
+      if (f.size > 100 * 1024 * 1024) {
+        errEl.textContent = `File "${f.name}" melebihi batas 100MB dan tidak ditambahkan.`;
+        errEl.classList.remove('hidden');
+        setTimeout(() => errEl.classList.add('hidden'), 4000);
+        return;
+      }
+      if (selectedFiles.length >= 10) {
+        errEl.textContent = 'Maksimal 10 file sekaligus.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (!selectedFiles.find(sf => sf.name === f.name && sf.size === f.size))
+        selectedFiles.push(f);
+    });
+    syncInput();
+    renderList();
   }
 
-  // ── Form Submit ─────────────────────────────────────────────────────────────
+  function removeFile(idx) {
+    selectedFiles.splice(idx, 1);
+    syncInput();
+    renderList();
+  }
+
+  function syncInput() {
+    try {
+      const dt = new DataTransfer();
+      selectedFiles.forEach(f => dt.items.add(f));
+      fileInput.files = dt.files;
+    } catch (e) {
+      // DataTransfer tidak support di beberapa browser lama
+    }
+  }
+
+  function fileIcon(name) {
+    const ext = (name || '').split('.').pop().toLowerCase();
+    const m = {
+      pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊',
+      ppt:'📋', pptx:'📋', jpg:'🖼️', jpeg:'🖼️', png:'🖼️',
+      gif:'🖼️', webp:'🖼️', zip:'📦', rar:'📦', '7z':'📦',
+      mp4:'🎬', avi:'🎬', mp3:'🎵', wav:'🎵', txt:'📃',
+      js:'💻', py:'💻', html:'💻', css:'💻', ts:'💻',
+    };
+    return m[ext] || '📁';
+  }
+
+  function renderList() {
+    if (!selectedFiles.length) {
+      fileList.classList.add('hidden');
+      fileList.innerHTML = '';
+      return;
+    }
+    fileList.classList.remove('hidden');
+    const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0);
+    fileList.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-xs text-gray-400 font-medium">${selectedFiles.length} file dipilih</p>
+        <p class="text-xs text-gray-600">Total: ${(totalSize/1024/1024).toFixed(1)} MB</p>
+      </div>
+      ${selectedFiles.map((f, i) => `
+        <div class="flex items-center gap-3 p-2.5 bg-gray-800 rounded-xl border border-gray-700">
+          <span class="text-lg shrink-0">${fileIcon(f.name)}</span>
+          <div class="flex-1 min-w-0">
+            <p class="text-xs text-white font-medium truncate">${f.name}</p>
+            <p class="text-xs text-gray-500">${(f.size/1024/1024).toFixed(2)} MB</p>
+          </div>
+          <button type="button" onclick="removeFile(${i})"
+                  class="text-gray-500 hover:text-red-400 p-1 transition-colors shrink-0">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>`).join('')}`;
+  }
+
+  // ── Form Submit ──────────────────────────────────────────────────────────────
   document.getElementById('order-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const errEl = document.getElementById('form-error');
-    const btn = document.getElementById('submit-btn');
+    const errEl   = document.getElementById('form-error');
+    const btn     = document.getElementById('submit-btn');
     const spinner = document.getElementById('submit-spinner');
-    const text = document.getElementById('submit-text');
+    const text    = document.getElementById('submit-text');
+    const prog    = document.getElementById('upload-progress');
+    const progTxt = document.getElementById('upload-progress-text');
 
     errEl.classList.add('hidden');
 
     const title = document.getElementById('title').value.trim();
-    const desc = document.getElementById('description').value.trim();
+    const desc  = document.getElementById('description').value.trim();
     if (!title || !desc) {
       errEl.textContent = 'Judul dan deskripsi wajib diisi.';
       return errEl.classList.remove('hidden');
     }
 
     btn.disabled = true;
-    text.textContent = 'Memproses...';
     spinner.classList.remove('hidden');
+
+    if (selectedFiles.length > 0) {
+      text.textContent = `Mengupload ${selectedFiles.length} file...`;
+      prog.classList.remove('hidden');
+      progTxt.textContent = `Mengupload file ke server (0/${selectedFiles.length})...`;
+    } else {
+      text.textContent = 'Memproses...';
+    }
 
     try {
       const formData = new FormData(e.target);
-      const res = await fetch('/api/orders', { method: 'POST', body: formData });
+
+      // Pastikan semua file masuk ke formData
+      selectedFiles.forEach(f => formData.append('attachments', f));
+
+      const res  = await fetch('/api/orders', { method: 'POST', body: formData });
       const data = await res.json();
 
       if (data.success) {
+        text.textContent = 'Berhasil! Mengarahkan...';
         window.location.href = '/pembayaran/' + data.orderId;
       } else {
         throw new Error(data.error || 'Gagal membuat pesanan');
@@ -237,6 +322,7 @@
       btn.disabled = false;
       text.textContent = 'Lanjut ke Pembayaran →';
       spinner.classList.add('hidden');
+      prog.classList.add('hidden');
     }
   });
 </script>
