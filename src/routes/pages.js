@@ -106,12 +106,10 @@ router.get('/dashboard', firebaseAuth, async (req, res) => {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     const stats = {
-      total:      myOrders.length,
-      // "Menunggu Bayar" = belum bayar (status masih menunggu_pembayaran)
-      menunggu:   myOrders.filter((o) => o.status === 'menunggu_pembayaran').length,
-      // "Dikerjakan" = status antrian ATAU dikerjakan (sudah bayar, belum selesai)
-      dikerjakan: myOrders.filter((o) => o.status === 'antrian' || o.status === 'dikerjakan').length,
-      selesai:    myOrders.filter((o) => o.status === 'selesai').length,
+      total: myOrders.length,
+      menunggu: myOrders.filter((o) => o.payment_status === 'pending').length,
+      dikerjakan: myOrders.filter((o) => o.status === 'dikerjakan').length,
+      selesai: myOrders.filter((o) => o.status === 'selesai').length,
     };
 
     res.render('dashboard', {
@@ -130,29 +128,6 @@ router.get('/dashboard', firebaseAuth, async (req, res) => {
       stats: { total: 0, menunggu: 0, dikerjakan: 0, selesai: 0 },
       paid: false,
     });
-  }
-});
-
-// ─── GET /orders/:id/download/:fileIdx ───────────────────────────────────────
-// User download file hasil (hanya milik sendiri)
-router.get('/orders/:id/download/:fileIdx', firebaseAuth, async (req, res) => {
-  try {
-    const { getResultFile } = require('../services/github');
-    const { json: orders } = await readFile('data/orders.json');
-    const order = orders.find((o) => o.id === req.params.id && o.user_id === req.user.uid);
-    if (!order) return res.status(404).send('Pesanan tidak ditemukan');
-
-    const fi   = parseInt(req.params.fileIdx);
-    const file = (order.result_files || [])[fi];
-    if (!file) return res.status(404).send('File tidak ditemukan');
-
-    const { buffer } = await getResultFile(file.github_path);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.send(buffer);
-  } catch (err) {
-    console.error('User download error:', err.message);
-    res.status(500).send('Gagal mengunduh file');
   }
 });
 
